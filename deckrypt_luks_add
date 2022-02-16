@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+
+sudo cryptsetup isLuks ${@: -1}
+
+read -sp "Enter existing passphrase: " existing
+echo
+
+printf "Supply combinations: "
+new1="$(deckrypt_input)"
+echo
+
+printf "Confirm combinations: "
+new2="$(deckrypt_input)"
+echo
+
+[ "$new1" != "$new2" ] && echo Combinations do not match && exit 1
+
+printf "%s\n%s\n" "$existing" "$new1" | sudo cryptsetup luksAddKey $@
