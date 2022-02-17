@@ -1,5 +1,5 @@
 # Deckrypt
-Unlock a LUKS-encrypted root partition with a sequence of game controller combinations in Arch Linux.
+Unlock a LUKS-encrypted root partition with game controller combinations in Arch Linux.
 
 This is meant for people who want full disk encryption for devices like the Steam Deck.
 
@@ -30,7 +30,6 @@ This is not entirely correct because some buttons have to be pressed by the same
 
 ## Preparation
 Some things are hardcoded in `deckrypt_input.c` and need to be changed according to your controller and setup:
-* the device path
 * buttons that can be used for combinations
 * button to confirm
 * button to abort

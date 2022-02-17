@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -5,14 +6,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <linux/input-event-codes.h>
 #include <libevdev-1.0/libevdev/libevdev.h>
-
-// TODO: The device name is hardcoded for now.
-// The name is not guaranteed to stay the same and
-// some kind of device detection would be preferable.
-#define DEVICE "/dev/input/event8"
 
 // Threshold after a button becomes a hold-button (milliseconds)
 #define THRESHOLD 250
@@ -121,26 +118,50 @@ static void handle_button(struct input_event *ev) {
     }
 }
 
+static int is_event_device(const struct dirent *dir) {
+    return strncmp("event", dir->d_name, 5) == 0;
+}
+
+static bool find_device(struct libevdev** device) {
+    struct dirent **namelist;
+    int n_devices = scandir("/dev/input/", &namelist, is_event_device, NULL);
+    for (int i = 0; i < n_devices; i++) {
+        char *device_path = calloc(strlen("/dev/input/") + namelist[i]->d_reclen + 1,
+                sizeof(char));
+        sprintf(device_path, "%s%s", "/dev/input/", namelist[i]->d_name);
+
+        int fd = open(device_path, O_RDONLY|O_NONBLOCK);
+        free(device_path);
+
+        if (libevdev_new_from_fd(fd, device) == 0) {
+            if (libevdev_has_event_code(*device, EV_KEY, ABORT_BUTTON)) {
+                for (int j = i; j < n_devices; j++) {
+                    free(namelist[j]);
+                }
+                free(namelist);
+                return true;
+            }
+            else {
+                libevdev_free(*device);
+                *device = NULL;
+            }
+        }
+        close(fd);
+        free(namelist[i]);
+    }
+    free(namelist);
+    return false;
+}
+
 int main () {
     gettimeofday(&start_time, NULL);
-
-    int rc = 1;
-    int fd = open(DEVICE, O_RDONLY|O_NONBLOCK);
-
     struct libevdev *device = NULL;
-    rc = libevdev_new_from_fd(fd, &device);
-    if (rc < 0) {
-        fprintf(stderr, "Failed to init libevdev (%s)\n", strerror(-rc));
+    if (!find_device(&device)) {
+        fprintf(stderr, "No suitable device available\n");
         return 1;
     }
 
-    // Make sure that at least the abort button is available to avoid locking in.
-    if (!libevdev_has_event_code(device, EV_KEY, ABORT_BUTTON)) {
-        libevdev_free(device);
-        fprintf(stderr, "No suitable controller device available\n");
-        return 1;
-    }
-
+    int rc;
     do {
         struct input_event ev;
         rc = libevdev_next_event(device, LIBEVDEV_READ_FLAG_NORMAL, &ev);

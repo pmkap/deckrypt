@@ -100,7 +100,7 @@ EOF
                     printf "Supply controller combination and confirm:"
                     combination="$(deckrypt_input)"
                     if [ "$?" -gt 0 ]; then
-                        echo "\nCould't get controller combination. Reverting to passphrase."
+                        printf "\nCould't get controller combination. Reverting to passphrase.\n"
                         dopassphrase=1
                         break
                     fi
