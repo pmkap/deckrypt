@@ -30,6 +30,8 @@ typedef struct Button {
 
 // Use evtest to find which events are supported by a controller.
 // Buttons not listed here are ignored.
+#define CONFIRM_BUTTON BTN_BASE4
+#define ABORT_BUTTON BTN_BASE3
 static Button buttons[] = {
     { .code = BTN_TRIGGER, .name = "TRIG",  .pressed = false },
     { .code = BTN_THUMB,   .name = "THMB",  .pressed = false },
@@ -42,14 +44,6 @@ static Button buttons[] = {
     { .code = BTN_BASE5,   .name = "BASE5", .pressed = false },
     { .code = BTN_BASE6,   .name = "BASE6", .pressed = false }
 };
-
-// Button to confirm the supplied combinations.
-// Program exit with success if pressed.
-static const uint16_t confirm_button = BTN_BASE4;
-
-// Button to abort.
-// Program exits with error if pressed.
-static const uint16_t abort_button = BTN_BASE3;
 
 static const size_t n_buttons = sizeof(buttons) / sizeof(Button);
 
@@ -141,7 +135,7 @@ int main () {
     }
 
     // Make sure that at least the abort button is available to avoid locking in.
-    if (!libevdev_has_event_code(device, EV_KEY, abort_button)) {
+    if (!libevdev_has_event_code(device, EV_KEY, ABORT_BUTTON)) {
         libevdev_free(device);
         fprintf(stderr, "No suitable controller device available\n");
         return 1;
@@ -154,11 +148,11 @@ int main () {
             switch (ev.type) {
                 case EV_KEY:
                     if (ev.value == 0) {
-                        if (ev.code == confirm_button) {
+                        if (ev.code == CONFIRM_BUTTON) {
                             libevdev_free(device);
                             return 0;
                         }
-                        else if (ev.code == abort_button) {
+                        else if (ev.code == ABORT_BUTTON) {
                             libevdev_free(device);
                             fprintf(stderr, "\nController input aborted by user\n");
                             return 1;
