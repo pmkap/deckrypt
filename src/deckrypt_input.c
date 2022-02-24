@@ -1,15 +1,17 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/time.h>
-#include <linux/input-event-codes.h>
-#include <libevdev-1.0/libevdev/libevdev.h>
+#include <unistd.h>
+#include <libevdev/libevdev.h>
+
+#include "uitype.h"
 
 // Threshold after a button becomes a hold-button (milliseconds)
 #define THRESHOLD 250
@@ -27,8 +29,8 @@ typedef struct Button {
 
 // Use evtest to find which events are supported by a controller.
 // Buttons not listed here are ignored.
-#define CONFIRM_BUTTON BTN_BASE4
-#define ABORT_BUTTON BTN_BASE3
+#define ENTER_BUTTON BTN_BASE4
+#define CLEAR_BUTTON BTN_BASE3
 static Button buttons[] = {
     { .code = BTN_TRIGGER, .name = "TRIG",  .pressed = false },
     { .code = BTN_THUMB,   .name = "THMB",  .pressed = false },
@@ -68,9 +70,8 @@ static Button* button_from_code(uint16_t code) {
     return NULL;
 }
 
-// Print a controller combination to stdout
 // arg Button *b: The released button that concludes the combination
-static void print_combination(Button *b) {
+static void combination(Button *b) {
     char buffer[n_buttons * (MAX_NAME_LEN + 1)];
     buffer[0] = '\0';
     // Check for hold-buttons
@@ -97,8 +98,9 @@ static void print_combination(Button *b) {
         strcat(buffer, " ");
         strcat(buffer, b->name);
     }
-    printf("%s;", buffer);
-    fflush(stdout);
+
+    strcat(buffer, ";");
+    uitype_type(buffer);
 }
 
 static void handle_button(struct input_event *ev) {
@@ -113,7 +115,7 @@ static void handle_button(struct input_event *ev) {
         button->pressed = false;
         button->time_released = time2millis(ev->time);
         if (button->time_released - button->time_pressed < THRESHOLD) {
-            print_combination(button);
+            combination(button);
         }
     }
 }
@@ -134,7 +136,7 @@ static bool find_device(struct libevdev** device) {
         free(device_path);
 
         if (libevdev_new_from_fd(fd, device) == 0) {
-            if (libevdev_has_event_code(*device, EV_KEY, ABORT_BUTTON)) {
+            if (libevdev_has_event_code(*device, EV_KEY, ENTER_BUTTON)) {
                 for (int j = i; j < n_devices; j++) {
                     free(namelist[j]);
                 }
@@ -153,42 +155,55 @@ static bool find_device(struct libevdev** device) {
     return false;
 }
 
-int main () {
-    gettimeofday(&start_time, NULL);
-    struct libevdev *device = NULL;
-    if (!find_device(&device)) {
-        fprintf(stderr, "No suitable device available\n");
-        return 1;
-    }
 
-    int rc;
-    do {
-        struct input_event ev;
-        rc = libevdev_next_event(device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-        if (rc == 0) {
-            switch (ev.type) {
-                case EV_KEY:
-                    if (ev.value == 0) {
-                        if (ev.code == CONFIRM_BUTTON) {
-                            libevdev_free(device);
-                            return 0;
+static volatile bool terminate = false;
+static void signal_handler(int signum) { terminate = true; }
+
+int main() {
+    gettimeofday(&start_time, NULL);
+
+    if (uitype_init() != 0) {
+        return 1;
+    };
+
+    struct libevdev *device = NULL;
+    while (true) {
+        signal(SIGINT, signal_handler);
+        signal(SIGTERM, signal_handler);
+        if (terminate) break;
+
+        if (device == NULL) {
+            find_device(&device);
+        }
+        else {
+            struct input_event ev;
+            int rc = libevdev_next_event(device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
+            if (rc == 0) {
+                switch (ev.type) {
+                    case EV_KEY:
+                        if (ev.value == 0) {
+                            if (ev.code == ENTER_BUTTON) {
+                                uitype_enter();
+                            }
+                            else if (ev.code == CLEAR_BUTTON) {
+                                uitype_ctrlu();
+                            }
                         }
-                        else if (ev.code == ABORT_BUTTON) {
-                            libevdev_free(device);
-                            fprintf(stderr, "\nController input aborted by user\n");
-                            return 1;
-                        }
-                    }
-                    handle_button(&ev);
-                    break;
-                case EV_ABS:
-                    // Idea: Handle D-Pad directions like buttons
-                    break;
+                        handle_button(&ev);
+                        break;
+                    case EV_ABS:
+                        // Idea: Handle D-Pad directions like buttons
+                        break;
+                }
             }
         }
-    } while (rc == 1 || rc == 0 || rc == -EAGAIN);
+    }
 
-    libevdev_free(device);
-    fprintf(stderr, "%s\n", strerror(-rc));
-    return 1;
+    // Cleanup
+    if (device != NULL) {
+        libevdev_free(device);
+    }
+    uitype_deinit();
+
+    return 0;
 }

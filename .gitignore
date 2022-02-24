@@ -1,3 +1,4 @@
 /deckrypt_input
 /deckrypt_input.o
 vgcore.*
+*.o
