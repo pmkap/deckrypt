@@ -3,7 +3,7 @@ Unlock a LUKS-encrypted root partition with game controller combinations on Arch
 
 This is meant for people who want full disk encryption for devices like the Steam Deck.
 
-It consist of a C prgram that translates game controller combinations to keyboard presses and an initcpio hook to provide this in early userspace.
+It consist of a C prgram that translates game controller combinations to a character sequence and then induces events as if the sequence was typed on a real keyboard. An initcpio hook provides this in early userspace.
 
 ## Combinations
 A combination consists of
@@ -41,4 +41,5 @@ These will be matched with the Steam Deck once I get one (or a pull resquest).
 * Compile the `deckrypt_input` binary with `make` and make it available in your path.
 * Install the initcpio hooks.
 * Add `deckrypt` (directly before `encrypt`) in the `HOOKS`-line in `/etc/mkinitcpio.conf` and regenerate initramfs.
+
 (I will make an AUR package for these steps sometime.)
