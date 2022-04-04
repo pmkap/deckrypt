@@ -33,6 +33,8 @@ These will be matched with the Steam Deck once I get one (or a pull resquest).
 
 `evtest` (available in the official repository) can be used to find a device and available buttons.
 
+It is highly recommended to setup LUKS with a normal password and then use deckrypt with another slot. See [cryptsetup(8)](https://man.archlinux.org/man/cryptsetup.8.en).
+
 ## Dependencies
 * libevdev (official repos)
 * libkeymap (AUR)
