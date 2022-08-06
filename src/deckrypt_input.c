@@ -20,12 +20,27 @@
 #define MAX_NAME_LEN 5
 
 typedef struct Button {
+    // linux event code
     uint16_t code;
     char name[MAX_NAME_LEN + 1];
     bool pressed;
     int64_t time_pressed;
     int64_t time_released;
 } Button;
+
+typedef struct Axis {
+    // linux event code
+    uint16_t code;
+    // An axis can be "translated" to two buttons. E.g. the horizontal D-pad axis
+    // to buttons for left and right. These two buttons correspond to X and Y here.
+    char nameX[MAX_NAME_LEN + 1];
+    char nameY[MAX_NAME_LEN + 1];
+    // press
+    int16_t valueX;
+    int16_t valueY;
+    // release
+    int16_t value0;
+} Axis;
 
 // Use evtest to find which events are supported by a controller.
 // Buttons not listed here are ignored.
@@ -41,13 +56,61 @@ static Button buttons[] = {
     { .code = BTN_BASE,    .name = "BASE",  .pressed = false },
     { .code = BTN_BASE2,   .name = "BASE2", .pressed = false },
     { .code = BTN_BASE5,   .name = "BASE5", .pressed = false },
-    { .code = BTN_BASE6,   .name = "BASE6", .pressed = false }
+    { .code = BTN_BASE6,   .name = "BASE6", .pressed = false },
+    // These "buttons" are translated from the axes below, names have to match
+    { .code = 0xffff,      .name = "D-RI",  .pressed = false },
+    { .code = 0xffff,      .name = "D-LE",  .pressed = false },
+    { .code = 0xffff,      .name = "D-UP",  .pressed = false },
+    { .code = 0xffff,      .name = "D-DO",  .pressed = false },
+    { .code = 0xffff,      .name = "L-RI",  .pressed = false },
+    { .code = 0xffff,      .name = "L-LE",  .pressed = false },
+    { .code = 0xffff,      .name = "L-UP",  .pressed = false },
+    { .code = 0xffff,      .name = "L-DO",  .pressed = false },
+    { .code = 0xffff,      .name = "R-RI",  .pressed = false },
+    { .code = 0xffff,      .name = "R-LE",  .pressed = false },
+    { .code = 0xffff,      .name = "R-UP",  .pressed = false },
+    { .code = 0xffff,      .name = "R-DO",  .pressed = false },
+};
+
+static Axis axes[] = {
+    {
+        .code = ABS_HAT0X,
+        .nameX = "D-LE", .nameY = "D-RI",
+        .valueX = -1, .value0 = 0, .valueY = 1
+    },
+    {
+        .code = ABS_HAT0Y,
+        .nameX = "D-UP", .nameY = "D-DO",
+        .valueX = -1, .value0 = 0, .valueY = 1
+    },
+    {
+        .code = ABS_X,
+        .nameX = "L-LE", .nameY = "L-RI",
+        .valueX = 0, .value0 = 128, .valueY = 255
+    },
+    {
+        .code = ABS_Y,
+        .nameX = "L-UP", .nameY = "L-DO",
+        .valueX = 0, .value0 = 128, .valueY = 255
+    },
+    {
+        .code = ABS_Z,
+        .nameX = "R-LE", .nameY = "R-RI",
+        .valueX = 0, .value0 = 128, .valueY = 255
+    },
+    {
+        .code = ABS_RZ,
+        .nameX = "R-UP", .nameY = "R-DO",
+        .valueX = 0, .value0 = 128, .valueY = 255
+    },
 };
 
 static const size_t n_buttons = sizeof(buttons) / sizeof(Button);
+static const size_t n_axes = sizeof(axes) / sizeof(Axis);
 
 static struct timeval start_time;
 
+// Convert the timestamp of an event to milliseconds since the program started
 static int64_t time2millis(struct timeval t) {
     int64_t secs_diff = t.tv_sec - start_time.tv_sec;
     int64_t usecs_diff;
@@ -70,7 +133,16 @@ static Button* button_from_code(uint16_t code) {
     return NULL;
 }
 
-// arg Button *b: The released button that concludes the combination
+static Button* button_from_name(char *name) {
+    for (size_t i = 0; i < n_buttons; i++) {
+        if (strncmp(name, buttons[i].name, MAX_NAME_LEN) == 0) {
+            return &buttons[i];
+        }
+    }
+    return NULL;
+}
+
+// Argument Button *b: The released button that concludes the combination
 static void combination(Button *b) {
     char buffer[n_buttons * (MAX_NAME_LEN + 1)];
     buffer[0] = '\0';
@@ -95,7 +167,7 @@ static void combination(Button *b) {
         strcat(buffer, b->name);
     }
     else {
-        strcat(buffer, " ");
+        strcat(buffer, "+");
         strcat(buffer, b->name);
     }
 
@@ -116,6 +188,41 @@ static void handle_button(struct input_event *ev) {
         button->time_released = time2millis(ev->time);
         if (button->time_released - button->time_pressed < THRESHOLD) {
             combination(button);
+        }
+    }
+}
+
+static void handle_axis(struct input_event *ev) {
+    for (size_t i = 0; i < n_axes; i++) {
+        if (ev->code == axes[i].code) {
+            Button *button;
+            if (ev->value == axes[i].valueX) {
+                button = button_from_name(axes[i].nameX);
+                button->pressed = true;
+                button->time_pressed = time2millis(ev->time);
+            } else if (ev->value == axes[i].valueY) {
+                button = button_from_name(axes[i].nameY);
+                button->pressed = true;
+                button->time_pressed = time2millis(ev->time);
+            } else if (ev->value == axes[i].value0) {
+                // One of the two "buttons" of the axis was released
+                button = button_from_name(axes[i].nameX);
+                if (button->pressed) {
+                    button->pressed = false;
+                    button->time_released = time2millis(ev->time);
+                    if (button->time_released - button->time_pressed < THRESHOLD) {
+                        combination(button);
+                        return;
+                    }
+                }
+
+                button = button_from_name(axes[i].nameY);
+                button->pressed = false;
+                button->time_released = time2millis(ev->time);
+                if (button->time_released - button->time_pressed < THRESHOLD) {
+                    combination(button);
+                }
+            }
         }
     }
 }
@@ -192,7 +299,7 @@ int main() {
                         handle_button(&ev);
                         break;
                     case EV_ABS:
-                        // Idea: Handle D-Pad directions like buttons
+                        handle_axis(&ev);
                         break;
                 }
             }

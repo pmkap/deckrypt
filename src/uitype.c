@@ -13,9 +13,17 @@
 static struct libevdev *device;
 static struct libevdev_uinput *udevice;
 
-// "Reverse" keymap that maps ascii characters to event codes.
+// "Reverse" keymap that maps ascii characters to event codes. The first
+// column is the modifier mask and the second column is the input event code.
+// Can be read as "Which modifiers and keys do I need to press to produce a
+// certain ASCII character?".
 static uint8_t chrmap[CHRMAP_LEN_X][CHRMAP_LEN_Y];
-static const uint8_t modmap[] = { 42, 100, 29 };
+
+static const uint8_t modmap[] = {
+    KEY_LEFTSHIFT,
+    KEY_RIGHTALT,
+    KEY_LEFTCTRL,
+};
 
 static void press(uint8_t mod, uint32_t code) {
     // Press modifiers
@@ -88,7 +96,6 @@ static int genchrmap() {
 }
 
 // Returns 0 on success. In this case the caller is responsible to call uitype_deinit
-// On failure the value of uitype is unmodified.
 int uitype_init() {
     if (genchrmap() != 0) {
         return 1;

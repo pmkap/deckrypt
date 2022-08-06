@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #include <libevdev/libevdev-uinput.h>
 
 #define ARRLEN(a) (sizeof(a) / sizeof(a[0]))

@@ -27,7 +27,7 @@ This is not entirely correct because some buttons have to be pressed by the same
 Some things are hardcoded in `deckrypt_input.c` and need to be changed according to your controller and setup:
 * buttons that can be used for combinations
 * button to confirm
-* button to abort
+* button to clear
 
 These will be matched with the Steam Deck once I get one (or a pull resquest).
 
