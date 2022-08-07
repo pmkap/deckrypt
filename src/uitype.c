@@ -1,3 +1,7 @@
+// This library can be used to "type" ASCII characters with a virtual input device
+// using the uinput kernel module.
+// Only meant for console/tty because it types based on the kernel keymap.
+
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -15,7 +19,7 @@ static struct libevdev_uinput *udevice;
 
 // "Reverse" keymap that maps ascii characters to event codes. The first
 // column is the modifier mask and the second column is the input event code.
-// Can be read as "Which modifiers and keys do I need to press to produce a
+// Can be read as "Which modifiers and key do I need to press to produce a
 // certain ASCII character?".
 static uint8_t chrmap[CHRMAP_LEN_X][CHRMAP_LEN_Y];
 
@@ -49,6 +53,12 @@ static void press(uint8_t mod, uint32_t code) {
     }
 }
 
+// The kernel keymap maps event codes and modifiers to symbols.
+// We want to "reverse" this to map ASCII characters to event codes.
+// To make this work with different keyboard layouts, we use the libkeymap API
+// to check out the current keymap and generate our map from that.
+// Note that the kernel keymap is independent of the Xorg/Wayland keyboard layout
+// and only relevant on console/tty.
 static int genchrmap() {
     char *tty = ttyname(fileno(stdin));
     int fd;
@@ -75,8 +85,10 @@ static int genchrmap() {
 
 	lk_kernel_keymap(ctx, fd);
 
-    for (int i = 1; i <= 57; i++) {
-        for (int j = 0; j <= 2; j++) {
+    // Traverse the kernel keymap to look for ASCII characters and store the
+    // respective event codes and modifiers in our map.
+    for (int j = 0; j <= 2; j++) {
+        for (int i = 1; i <= 57; i++) {
             int code = lk_get_key(ctx, j, i);
             int ktyp = KTYP(code);
             int kval = KVAL(code);

@@ -17,7 +17,7 @@ void uitype_enter();
 
 void uitype_ctrlu();
 
-
+// { modmask, event-code }
 static const uint8_t default_chrmap[CHRMAP_LEN_X][CHRMAP_LEN_Y] = {
     { 0, 0 },
     { 0, 0 },
