@@ -21,7 +21,7 @@ A button becomes a hold-button if it is pressed for at least a 250 ms. Hold-butt
 Combinations are separated by semicolons and thus build a sequence.
 
 ### Security
-Let's take  a standard game contoller like the one from the PS2 or the Steam Deck let's only use the thumbs and index fingers. Each of those fingers is restricted to their own set of reachable controls.
+Let's take a standard game contoller like the one from the PS2 or the Steam Deck and let's only use the thumbs and index fingers. Each of those fingers is restricted to their own set of reachable controls.
 
 | Finger |Controls |
 | --- | --- |
@@ -36,7 +36,7 @@ The left index finger for example can tap either L1 or L2 and hold either L1, L2
 
 The thumbs are a bit more complicated because of the D-pad/analog sticks. These are translated to four "buttons" each, which can be tapped. However, in terms of holding there are not just four "buttons" but rather eight directions.
 
-So the right thumb can tap the four buttons X/Y/A/B, four directions with the analog stick or clicking the analog stick itself, resulting in nine enumerations. It can hold either of X/Y/A/B, eight directions, clicking the analog stick or none, which makes 14.
+So the right thumb can tap the four buttons X/Y/A/B, four directions with the analog stick or clicking the analog stick itself, resulting in nine enumerations. It can hold either of X/Y/A/B, eight directions, holding the analog stick or none, which makes 14.
 
 | Finger | Hold Enumerations | Tap Enumerations |
 | --- | --- | --- |
@@ -53,7 +53,7 @@ with
 
 $$p=\prod_{i=1}^{n}A_{i,1}$$
 
-Choosing four random combinations provides an entropy of 50 bits, choosing five gets you 62 bits of entropy.
+This means each randomly picked combination provides roughly 12.5 bits of entropy. A sequnce of four or five combinations would already provide decent security.
 
 ## Preparation
 Some things are hardcoded in `deckrypt_input.c` and need to be changed according to your controller and setup:
