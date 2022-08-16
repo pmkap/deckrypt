@@ -207,16 +207,9 @@ static void handle_axis(struct input_event *ev) {
             } else if (ev->value == axes[i].value0) {
                 // One of the two "buttons" of the axis was released
                 button = button_from_name(axes[i].nameX);
-                if (button->pressed) {
-                    button->pressed = false;
-                    button->time_released = time2millis(ev->time);
-                    if (button->time_released - button->time_pressed < THRESHOLD) {
-                        combination(button);
-                        return;
-                    }
+                if (!button->pressed) {
+                    button = button_from_name(axes[i].nameY);
                 }
-
-                button = button_from_name(axes[i].nameY);
                 button->pressed = false;
                 button->time_released = time2millis(ev->time);
                 if (button->time_released - button->time_pressed < THRESHOLD) {

@@ -53,7 +53,7 @@ with
 
 $$p=\prod_{i=1}^{n}A_{i,1}$$
 
-This means each randomly picked combination provides roughly 12.5 bits of entropy. A sequnce of four or five combinations would already provide decent security.
+This means each randomly picked combination provides roughly 12.5 bits of entropy. A sequence of four or five combinations would already provide decent security.
 
 ## Preparation
 Some things are hardcoded in `deckrypt_input.c` and need to be changed according to your controller and setup:
