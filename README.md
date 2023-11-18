@@ -69,11 +69,11 @@ It is highly recommended to setup LUKS with a normal password and then use deckr
 
 ## Dependencies
 * libevdev (official repos)
-* [libkeymap](https://aur.archlinux.org/packages/libkeymap) (AUR)
 
 ## Installation
-* Compile the `deckrypt_input` binary with `make` and make it available in your path.
-* Install the initcpio hooks.
+* Run `make` to build dependencies and the `deckrypt_input` binary.
+* Make `deckrypt_input` available in your path.
+* [Install the initcpio hooks](https://wiki.archlinux.org/title/Mkinitcpio#HOOKS).
 * Add `deckrypt` (directly before `encrypt`) in the `HOOKS`-line in `/etc/mkinitcpio.conf` and regenerate initramfs.
 
 (I will make an AUR package for these steps sometime.)

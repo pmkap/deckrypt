@@ -2,3 +2,4 @@
 /deckrypt_input.o
 vgcore.*
 *.o
+/kbd/
